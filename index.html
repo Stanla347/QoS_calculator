@@ -296,7 +296,6 @@ table.t tr.hit td:last-child{border-radius:0 10px 10px 0}
         <div class="fields">
           <label class="field"><span>Jumlah Bytes</span><div class="inp"><input id="in-bytes" inputmode="numeric" autocomplete="off" placeholder="8346343"><em>byte</em></div></label>
           <label class="field"><span>Timespan</span><div class="inp"><input id="in-span" inputmode="decimal" autocomplete="off" placeholder="46,543"><em>detik</em></div></label>
-          <label class="field" style="grid-column:1/-1"><span>Bandwidth jaringan (opsional, untuk indeks)</span><div class="inp"><input id="in-bw" inputmode="decimal" autocomplete="off" placeholder="mis. 2"><em>Mbps</em></div></label>
         </div>
         <div class="result" data-out="thr">
           <div class="res-row"><span class="price empty" data-f="main">—</span><div class="stars" data-f="stars"></div></div>
@@ -441,7 +440,7 @@ table.t tr.hit td:last-child{border-radius:0 10px 10px 0}
         <span class="code">8.346.343 ÷ 46,543 = 179.325,4195 byte/s
 179.325,4195 × 8  = 1.434.603,356 bit/s</span>
         <h4>Catatan</h4>
-        <ul><li>Satuan hasil: bit/s (÷1000 = kbps, ÷1.000.000 = Mbps).</li><li>Indeks TIPHON memakai persentase terhadap bandwidth: Throughput ÷ Bandwidth × 100.</li></ul>
+        <ul><li>Satuan hasil: bit/s (÷1000 = kbps, ÷1.000.000 = Mbps).</li><li>Indeks throughput memakai nilai kbps langsung (lihat Tabel Indeks), tanpa perlu bandwidth.</li></ul>
       </article>
       <article class="card doc">
         <h3>Packet Loss</h3>
@@ -493,7 +492,7 @@ Jitter (ms)      = (Total Jitter ÷ Jumlah Paket) × 1000</span>
       <li>Catat <b>Bytes</b> dan <b>Time span, s</b> pada bagian Measurement (atau di Excel: <code class="i">=SUM(kolom Length)</code> pada raw data).</li>
       <li>Bagi: <code class="i">Bytes ÷ Time span</code> → byte/s.</li>
       <li>Kalikan 8 → <b>bit/s</b>. Bagi 1000 untuk kbps.</li>
-      <li>Untuk indeks: <code class="i">bit/s ÷ (Bandwidth × 1.000.000) × 100</code> lalu cocokkan ke tabel.</li>
+      <li>Untuk indeks: <code class="i">bit/s ÷ 1000</code> = kbps, lalu cocokkan ke Tabel Indeks.</li>
     </ol></div></details>
 
     <details class="acc"><summary><span class="tile" style="width:38px;height:38px;border-radius:12px;background:#fff0f2;color:var(--i1)"><svg style="width:20px;height:20px"><use href="#i-pkg"/></svg></span>Packet Loss</summary><div class="body"><ol>
@@ -566,11 +565,11 @@ const byId = id => document.getElementById(id);
    KONFIGURASI INDEKS TIPHON  (ubah di sini bila perlu)
    ============================================================ */
 const TIPHON = {
-  thr:  { title: 'Throughput',  unit: '% dari bandwidth', rows: [
-    { i: 4, range: '> 75 – 100 %', test: v => v > 75 },
-    { i: 3, range: '> 50 – 75 %',  test: v => v > 50 },
-    { i: 2, range: '> 25 – 50 %',  test: v => v > 25 },
-    { i: 1, range: '0 – 25 %',     test: () => true } ] },
+  thr:  { title: 'Throughput',  unit: 'kbps', rows: [
+    { i: 4, range: '> 2.100 kbps',        test: v => v > 2100 },
+    { i: 3, range: '> 1.200 – 2.100 kbps', test: v => v > 1200 },
+    { i: 2, range: '> 700 – 1.200 kbps',   test: v => v > 700 },
+    { i: 1, range: '≤ 700 kbps',           test: () => true } ] },
   loss: { title: 'Packet Loss', unit: '%', rows: [
     { i: 4, range: '0 – < 3 %',  test: v => v < 3 },
     { i: 3, range: '3 – < 15 %', test: v => v < 15 },
@@ -659,7 +658,7 @@ function setCard(k, o) {
 
 function recalc() {
   const v = {
-    bytes: parseCount(val('in-bytes')), span: parseDec(val('in-span')), bw: parseDec(val('in-bw')),
+    bytes: parseCount(val('in-bytes')), span: parseDec(val('in-span')),
     sent: parseCount(val('in-sent')), recv: parseCount(val('in-recv')),
     tdel: parseDec(val('in-tdel')), ndel: parseCount(val('in-ndel')),
     tjit: parseDec(val('in-tjit')), njit: parseCount(val('in-njit'))
@@ -673,11 +672,7 @@ function recalc() {
     o.main = nf(t.bps, 3) + ' bit/s';
     o.sub = `${nf(v.bytes, 0)} / ${nf(v.span, 6)} = ${nf(t.Bps, 4)} byte/s × 8 = ${nf(t.bps, 3)} bit/s`;
     o.meta = `≈ ${nf(t.bps / 1e3, 3)} kbps · ${nf(t.bps / 1e6, 4)} Mbps`;
-    if (Number.isFinite(v.bw) && v.bw > 0) {
-      o.pct = t.bps / (v.bw * 1e6) * 100;
-      o.idx = idxOf('thr', o.pct);
-      o.meta += ` · ${nf(o.pct, 2)} % dari bandwidth`;
-    } else o.meta += ' · isi bandwidth untuk mendapat indeks';
+    o.idx = idxOf('thr', t.bps / 1000);
     R.thr = o; setCard('thr', o);
   } else setCard('thr', { warn: Number.isFinite(v.span) && v.span <= 0 ? 'Timespan harus lebih dari 0.' : '' });
 
@@ -734,7 +729,7 @@ function renderResults(R, v) {
   byId('cartVal').textContent = avg ? `Indeks ${nf(avg, 2)}` : '—';
   byId('r-avg').innerHTML = avg ? `<span class="mono">${nf(avg, 2)}</span> · ${category(avg)}` : '—';
   byId('avgNote').textContent = idxs.length && idxs.length < 4
-    ? `Rata-rata dihitung dari ${idxs.length} indeks yang tersedia${!R.thr || !R.thr.idx ? ' (isi Bandwidth agar indeks Throughput ikut dihitung)' : ''}.` : '';
+    ? `Rata-rata dihitung dari ${idxs.length} indeks yang sudah terisi.` : '';
   byId('heroIdx').textContent = avg ? nf(avg, 2) : '—';
   byId('heroCat').textContent = avg ? category(avg) : 'Isi data untuk mulai';
   $$('#heroBars i').forEach((b, k) => b.classList.toggle('on', avg && k < Math.round(avg)));
@@ -1037,10 +1032,10 @@ function showTab(name) {
    EVENT
    ============================================================ */
 function sample() {
-  const s = { 'in-bytes': '8346343', 'in-span': '46,543', 'in-bw': '2', 'in-sent': '10553', 'in-recv': '10546',
+  const s = { 'in-bytes': '8346343', 'in-span': '46,543', 'in-sent': '10553', 'in-recv': '10546',
               'in-tdel': '46,543364', 'in-ndel': '10553', 'in-tjit': '0,0209389', 'in-njit': '10553' };
   Object.entries(s).forEach(([k, x]) => byId(k).value = x);
-  recalc(); toast('Contoh data dimuat (bandwidth 2 Mbps hanya contoh)');
+  recalc(); toast('Contoh data dimuat');
 }
 function resetAll() {
   $$('.pcard input').forEach(i => i.value = ''); njitSynced = true; recalc(); toast('Semua input dikosongkan');
