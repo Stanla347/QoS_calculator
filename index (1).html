@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2e5bf0">
+<title>QoS Calculator — Throughput, Packet Loss, Delay & Jitter</title>
+<meta name="description" content="Kalkulator QoS jaringan: Throughput, Packet Loss, Delay, Jitter dan indeks rata-rata TIPHON. Bisa impor CSV Wireshark/Excel.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232e5bf0'/%3E%3Cpath d='M14 44h6V34h-6zm12 0h6V26h-6zm12 0h6V18h-6z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213d; --muted:#6a7898; --line:#e4ebf9; --card:#fff;
+  --blue:#2e5bf0; --blue2:#1b3fd0; --blue-soft:#eaf0ff; --yellow:#ffd43b;
+  --i4:#14a46f; --i3:#2e5bf0; --i2:#f0a000; --i1:#d9485a;
+  --r:22px; --shadow:0 12px 32px rgba(36,76,200,.10),0 2px 6px rgba(36,76,200,.06);
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color:var(--ink);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; min-height:100vh; color:var(--ink);
+  background:
+    radial-gradient(900px 520px at 88% -8%,#fff 0,transparent 60%),
+    radial-gradient(760px 520px at -8% 18%,#d3e2ff 0,transparent 62%),
+    linear-gradient(180deg,#e9f1ff,#dce8fd);
+  background-attachment:fixed;
+  padding-bottom:120px;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{max-width:1080px;margin:0 auto;padding:20px 18px 0}
+[hidden]{display:none!important}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.who{display:flex;align-items:center;gap:12px}
+.avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#ffd43b,#ff9a3c);display:grid;place-items:center;border:3px solid #fff;box-shadow:var(--shadow)}
+.avatar svg{width:26px;height:26px;color:#1b2a5c}
+.who small{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.who strong{font-size:18px;font-weight:800;letter-spacing:-.2px}
+.top-actions{display:flex;gap:10px}
+.icon-btn{position:relative;width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;box-shadow:var(--shadow);transition:.15s}
+.icon-btn:hover{transform:translateY(-1px)}
+.icon-btn svg{width:20px;height:20px;color:var(--blue)}
+.dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--i1);border:2px solid #fff}
+
+/* chips */
+.chips{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:600;font-size:13.5px;color:#33415f;transition:.15s}
+.chip svg{width:16px;height:16px}
+.chip:hover{border-color:#c7d6f7}
+.chip.active{background:linear-gradient(135deg,#3a67f5,#1f45d8);color:#fff;border-color:transparent;box-shadow:0 8px 18px rgba(46,91,240,.35)}
+
+/* hero */
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1.5fr .8fr;gap:16px;align-items:center;padding:26px 28px;border-radius:26px;color:#fff;margin:6px 0 26px;
+  background:
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='240' viewBox='0 0 600 240'%3E%3Cpath d='M-20 150C80 70 160 230 280 150S470 70 640 140' fill='none' stroke='%23fff' stroke-opacity='.14' stroke-width='26'/%3E%3Cpath d='M-20 210C100 130 180 270 300 200S480 120 640 200' fill='none' stroke='%23fff' stroke-opacity='.07' stroke-width='20'/%3E%3C/svg%3E") center/cover no-repeat,
+   linear-gradient(135deg,#2f5df1,#1b3fd0);
+  box-shadow:0 18px 40px rgba(46,91,240,.30)}
+.hero h1{margin:0 0 8px;font-size:clamp(22px,3.4vw,30px);line-height:1.2;letter-spacing:-.4px;font-weight:800}
+.hero p{margin:0 0 18px;opacity:.9;font-size:14px;line-height:1.55;max-width:46ch}
+.btn-yellow{display:inline-flex;align-items:center;gap:8px;background:var(--yellow);color:#2b2200;border:0;border-radius:14px;padding:12px 18px;font-weight:800;font-size:14px;box-shadow:0 8px 16px rgba(0,0,0,.18);transition:.15s}
+.btn-yellow:hover{transform:translateY(-1px)}
+.btn-yellow svg{width:18px;height:18px}
+.hero-art{justify-self:end;width:100%;max-width:250px;background:linear-gradient(160deg,#16213f,#0c1226);border-radius:22px;padding:18px;box-shadow:0 14px 30px rgba(0,0,0,.28)}
+.hero-art small{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;opacity:.65;font-weight:600}
+.hero-art b{display:block;font-size:42px;line-height:1.05;font-weight:800;margin:4px 0 2px}
+.hero-art .cat{font-size:12.5px;opacity:.85;min-height:18px}
+.bars{display:flex;align-items:flex-end;gap:7px;height:46px;margin-top:12px}
+.bars i{flex:1;border-radius:5px;background:rgba(255,255,255,.14);transition:.3s}
+.bars i:nth-child(1){height:30%}.bars i:nth-child(2){height:52%}.bars i:nth-child(3){height:76%}.bars i:nth-child(4){height:100%}
+.bars i.on{background:linear-gradient(180deg,#8fb0ff,#4f7bff)}
+
+/* section titles */
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:6px 2px 14px}
+.sec-title h2{margin:0;font-size:19px;font-weight:800;letter-spacing:-.2px}
+.sec-title span{color:var(--muted);font-size:13px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{background:var(--card);border:1px solid #edf1fb;border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.pcard{display:flex;flex-direction:column;gap:14px}
+.phead{display:flex;align-items:center;gap:12px}
+.tile{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);flex:none}
+.tile svg{width:24px;height:24px}
+.pcard[data-k=loss] .tile{background:#fff0f2;color:var(--i1)}
+.pcard[data-k=delay] .tile{background:#fff6e0;color:#c98400}
+.pcard[data-k=jit] .tile{background:#e8faf2;color:var(--i4)}
+.phead h3{margin:0;font-size:17px;font-weight:800}
+.phead p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fields.one{grid-template-columns:1fr}
+.field span{display:block;font-size:12px;font-weight:600;color:#44527a;margin:0 0 5px 2px}
+.inp{display:flex;align-items:center;background:#f4f7ff;border:1.5px solid transparent;border-radius:14px;padding:0 12px;transition:.15s}
+.inp:focus-within{border-color:var(--blue);background:#fff;box-shadow:0 0 0 4px rgba(46,91,240,.12)}
+.inp input{flex:1;min-width:0;border:0;background:transparent;outline:0;padding:12px 0;font-weight:600;font-size:14.5px}
+.inp input::placeholder{color:#a3aecb;font-weight:500}
+.inp em{font-style:normal;font-size:12px;color:var(--muted);font-weight:600;margin-left:8px}
+.result{background:#f8faff;border:1px dashed #d5e0fa;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:9px}
+.res-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.price{background:linear-gradient(135deg,#3a67f5,#1f45d8);color:#fff;font-weight:800;font-size:16px;border-radius:11px;padding:7px 13px;box-shadow:0 6px 14px rgba(46,91,240,.28);word-break:break-all}
+.price.empty{background:#dfe6f7;color:#8b97b8;box-shadow:none}
+.stars{display:flex;align-items:center;gap:2px;font-size:12.5px;font-weight:700}
+.star{width:16px;height:16px;fill:#d9e0f1}
+.star.on{fill:#f5b301}
+.stars .lbl{margin-left:6px}
+.sub{margin:0;font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:#33415f;word-break:break-word}
+.meta{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.warn{margin:0;font-size:12.5px;color:var(--i1);font-weight:600}
+.formula{margin:0;font-size:12px;color:#7b3b00;font-weight:700}
+.tag-red{color:#a4483a;font-weight:700;font-size:12px}
+[data-i="4"] .lbl{color:var(--i4)} [data-i="3"] .lbl{color:var(--i3)} [data-i="2"] .lbl{color:var(--i2)} [data-i="1"] .lbl{color:var(--i1)}
+
+/* results card */
+.results{margin-top:16px}
+.rtable{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:14px}
+.rtable td{background:#f5f8ff;padding:12px 14px}
+.rtable td:first-child{border-radius:14px 0 0 14px;font-weight:700;width:34%}
+.rtable td:last-child{border-radius:0 14px 14px 0;text-align:right;white-space:nowrap}
+.rtable .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:500}
+.badge{display:inline-block;min-width:26px;text-align:center;border-radius:8px;padding:3px 8px;font-weight:800;font-size:12.5px;color:#fff;background:#9aa6c4}
+.badge[data-i="4"]{background:var(--i4)}.badge[data-i="3"]{background:var(--i3)}.badge[data-i="2"]{background:var(--i2)}.badge[data-i="1"]{background:var(--i1)}
+.avgrow td{background:linear-gradient(135deg,#eaf0ff,#dfe9ff)!important;font-weight:800}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:13px;padding:11px 16px;font-weight:700;font-size:13.5px;color:#26345c;transition:.15s}
+.btn:hover{border-color:#bcd0f8;transform:translateY(-1px)}
+.btn svg{width:17px;height:17px}
+.btn.primary{background:linear-gradient(135deg,#3a67f5,#1f45d8);color:#fff;border-color:transparent;box-shadow:0 8px 18px rgba(46,91,240,.3)}
+.btn.danger{color:var(--i1)}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6;margin:10px 2px 0}
+
+/* sticky bar */
+.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom));width:min(560px,calc(100% - 28px));z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;border-radius:22px;padding:17px 22px;color:#fff;font-weight:700;background:linear-gradient(135deg,#3a67f5,#1b3fd0);box-shadow:0 16px 34px rgba(31,69,216,.42)}
+.cartbar .l{display:flex;align-items:center;gap:10px;font-size:15px}
+.cartbar .pill{background:#fff;color:#1b3fd0;font-size:12px;font-weight:800;border-radius:999px;padding:4px 12px}
+.cartbar .r{font-size:17px;font-weight:800}
+
+/* csv */
+.drop{border:2px dashed #b9cdf8;background:#f6f9ff;border-radius:20px;padding:30px 18px;text-align:center;transition:.15s}
+.drop.over{background:#e6eeff;border-color:var(--blue)}
+.drop svg{width:40px;height:40px;color:var(--blue)}
+.drop h3{margin:10px 0 4px;font-size:16px}
+.drop p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.stat{background:#f5f8ff;border-radius:16px;padding:14px}
+.stat small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.stat b{display:block;font-size:17px;margin-top:4px;word-break:break-all}
+.stat i{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:2px}
+.canvaswrap{margin-top:16px}
+.canvaswrap h4{margin:0 0 6px;font-size:13px;color:#44527a}
+canvas{width:100%;height:150px;display:block;background:#f8faff;border-radius:14px}
+.radio{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.radio label{flex:1 1 230px;display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-size:13px;cursor:pointer}
+.radio input{margin-top:3px;accent-color:var(--blue)}
+.radio label:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.radio b{display:block;font-size:13.5px}
+
+.ctl{margin:20px 0 8px;font-size:13px;font-weight:800;color:#44527a}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.inp select{flex:1;min-width:0;border:0;background:transparent;outline:0;padding:12px 0;font-weight:600;font-size:14.5px}
+.radio .plain{display:block;width:100%;margin-top:6px;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;outline:0}
+.radio .plain:focus{border-color:var(--blue)}
+.radio label>span>span[data-cnt]{display:block;color:var(--blue);font-weight:700;font-size:12.5px}
+.radio label>span{line-height:1.5}
+@media (max-width:820px){.filters{grid-template-columns:1fr}}
+
+/* docs */
+.docs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.doc h3{margin:0 0 4px;font-size:17px}
+.doc .fn{margin:0 0 10px;color:var(--muted);font-size:13.5px;line-height:1.55}
+.code{display:block;background:#101a36;color:#d6e2ff;border-radius:14px;padding:13px 15px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;line-height:1.7;overflow-x:auto;white-space:pre;margin:8px 0}
+.doc h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--blue)}
+.doc ul{margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.65;color:#33415f}
+details.acc{background:#fff;border:1px solid #edf1fb;border-radius:18px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+details.acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 18px;font-weight:800;font-size:15.5px}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc summary::after{content:"+";margin-left:auto;width:28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:18px}
+details.acc[open] summary::after{content:"–"}
+details.acc .body{padding:0 20px 18px}
+details.acc ol{margin:0;padding-left:20px;font-size:13.5px;line-height:1.75;color:#2d3a5c}
+details.acc ol li{margin-bottom:4px}
+details.acc ol li::marker{color:var(--blue);font-weight:800}
+kbd,code.i{background:#eef3ff;border:1px solid #dbe5fb;border-radius:6px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:12px}
+
+/* tables */
+.tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:6px 8px}
+table.t td{padding:10px 8px;border-top:1px solid #edf1fb}
+table.t tr.hit td{background:#eaf0ff;font-weight:800}
+table.t tr.hit td:first-child{border-radius:10px 0 0 10px}
+table.t tr.hit td:last-child{border-radius:0 10px 10px 0}
+.scroll{overflow-x:auto}
+.empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);background:#14213d;color:#fff;padding:11px 18px;border-radius:14px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:40}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:820px){
+  .grid,.docs,.tgrid{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr;padding:22px}
+  .hero-art{justify-self:stretch;max-width:none;display:flex;align-items:center;gap:16px}
+  .hero-art .bars{flex:1;margin:0}
+  .stats{grid-template-columns:1fr 1fr}
+}
+@media (max-width:420px){
+  .fields{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+  .rtable td:first-child{width:auto}
+}
+@media print{
+  .chips,.cartbar,.top-actions,.actions,.toast{display:none!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+    <symbol id="i-pkg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3.3 7.5 12 12.5l8.7-5M12 12.5V21"/></g></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12h3l2-6 4 12 3-9 2 3h6"/></symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h4"/></g></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></g></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/></g></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></g></symbol>
+    <symbol id="i-hist" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></g></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></g></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></g></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></g></symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12m-5-5 5 5 5-5"/><path d="M4 20h16"/></g></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></g></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></g></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3-6.2 3.3L8 14.2 3 9.3l6.9-1z"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path fill="currentColor" d="M3 20h3v-5H3zm5 0h3V11H8zm5 0h3V7h-3zm5 0h3V3h-3z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="who">
+      <div class="avatar"><svg><use href="#i-signal"/></svg></div>
+      <div><small>Selamat datang di</small><strong>QoS Calculator</strong></div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btnReset" title="Kosongkan semua input" aria-label="Kosongkan semua input"><svg><use href="#i-reset"/></svg></button>
+      <button class="icon-btn" data-go="riwayat" title="Riwayat" aria-label="Riwayat"><svg><use href="#i-hist"/></svg><span class="dot" id="histDot" hidden></span></button>
+    </div>
+  </header>
+
+  <nav class="chips" id="chips" aria-label="Menu">
+    <button class="chip active" data-tab="hitung"><svg><use href="#i-calc"/></svg>Hitung QoS</button>
+    <button class="chip" data-tab="csv"><svg><use href="#i-up"/></svg>Impor CSV</button>
+    <button class="chip" data-tab="rumus"><svg><use href="#i-book"/></svg>Fungsi &amp; Rumus</button>
+    <button class="chip" data-tab="manual"><svg><use href="#i-list"/></svg>Cara Konvensional</button>
+    <button class="chip" data-tab="indeks"><svg><use href="#i-table"/></svg>Tabel Indeks</button>
+    <button class="chip" data-tab="riwayat"><svg><use href="#i-hist"/></svg>Riwayat</button>
+  </nav>
+
+  <noscript><div class="card">Aplikasi ini membutuhkan JavaScript untuk menghitung.</div></noscript>
+
+  <main>
+  <!-- ========== HITUNG ========== -->
+  <section class="tab" id="tab-hitung">
+    <div class="hero">
+      <div>
+        <h1>Hitung QoS jaringan,<br>hasil langsung jadi.</h1>
+        <p>Throughput, Packet Loss, Delay &amp; Jitter beserta indeks TIPHON. Rumus identik dengan perhitungan di Excel Anda.</p>
+        <button class="btn-yellow" id="btnSample"><svg><use href="#i-bolt"/></svg>Muat Contoh Data</button>
+      </div>
+      <div class="hero-art" aria-live="polite">
+        <div>
+          <small>Indeks rata-rata</small>
+          <b id="heroIdx">—</b>
+          <div class="cat" id="heroCat">Isi data untuk mulai</div>
+        </div>
+        <div class="bars" id="heroBars"><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div class="sec-title"><h2>Parameter QoS</h2><span>Isi variabel di tiap kartu — hasil terhitung otomatis</span></div>
+
+    <div class="grid">
+      <!-- Throughput -->
+      <article class="card pcard" data-k="thr">
+        <div class="phead"><div class="tile"><svg><use href="#i-bolt"/></svg></div><div><h3>Throughput</h3><p>Kecepatan data yang berhasil diterima</p></div></div>
+        <div class="fields">
+          <label class="field"><span>Jumlah Bytes</span><div class="inp"><input id="in-bytes" inputmode="numeric" autocomplete="off" placeholder="8346343"><em>byte</em></div></label>
+          <label class="field"><span>Timespan</span><div class="inp"><input id="in-span" inputmode="decimal" autocomplete="off" placeholder="46,543"><em>detik</em></div></label>
+          <label class="field" style="grid-column:1/-1"><span>Bandwidth jaringan (opsional, untuk indeks)</span><div class="inp"><input id="in-bw" inputmode="decimal" autocomplete="off" placeholder="mis. 2"><em>Mbps</em></div></label>
+        </div>
+        <div class="result" data-out="thr">
+          <div class="res-row"><span class="price empty" data-f="main">—</span><div class="stars" data-f="stars"></div></div>
+          <p class="sub" data-f="sub"></p>
+          <p class="meta" data-f="meta"></p>
+          <p class="warn" data-f="warn" hidden></p>
+          <p class="formula">Throughput = (Jumlah Bytes ÷ Timespan) × 8</p>
+        </div>
+      </article>
+
+      <!-- Packet loss -->
+      <article class="card pcard" data-k="loss">
+        <div class="phead"><div class="tile"><svg><use href="#i-pkg"/></svg></div><div><h3>Packet Loss</h3><p>Persentase paket yang hilang</p></div></div>
+        <div class="fields">
+          <label class="field"><span>Paket dikirim</span><div class="inp"><input id="in-sent" inputmode="numeric" autocomplete="off" placeholder="10553"><em>paket</em></div></label>
+          <label class="field"><span>Paket diterima</span><div class="inp"><input id="in-recv" inputmode="numeric" autocomplete="off" placeholder="10546"><em>paket</em></div></label>
+        </div>
+        <div class="result" data-out="loss">
+          <div class="res-row"><span class="price empty" data-f="main">—</span><div class="stars" data-f="stars"></div></div>
+          <p class="sub" data-f="sub"></p>
+          <p class="meta" data-f="meta"></p>
+          <p class="warn" data-f="warn" hidden></p>
+          <p class="formula">Packet Loss = ((Dikirim − Diterima) ÷ Dikirim) × 100</p>
+        </div>
+      </article>
+
+      <!-- Delay -->
+      <article class="card pcard" data-k="delay">
+        <div class="phead"><div class="tile"><svg><use href="#i-clock"/></svg></div><div><h3>Delay</h3><p>Rata-rata waktu tunda antar paket</p></div></div>
+        <div class="fields">
+          <label class="field"><span>Total Delay</span><div class="inp"><input id="in-tdel" inputmode="decimal" autocomplete="off" placeholder="94422,4035"><em>detik</em></div></label>
+          <label class="field"><span>Jumlah Paket</span><div class="inp"><input id="in-ndel" inputmode="numeric" autocomplete="off" placeholder="19986"><em>paket</em></div></label>
+        </div>
+        <div class="result" data-out="delay">
+          <div class="res-row"><span class="price empty" data-f="main">—</span><div class="stars" data-f="stars"></div></div>
+          <p class="sub" data-f="sub"></p>
+          <p class="meta" data-f="meta"></p>
+          <p class="warn" data-f="warn" hidden></p>
+          <p class="formula">Delay = (Total Delay ÷ Jumlah Paket) × 1000</p>
+        </div>
+      </article>
+
+      <!-- Jitter -->
+      <article class="card pcard" data-k="jit">
+        <div class="phead"><div class="tile"><svg><use href="#i-wave"/></svg></div><div><h3>Jitter</h3><p>Variasi delay antar paket</p></div></div>
+        <div class="fields">
+          <label class="field"><span>Total Jitter</span><div class="inp"><input id="in-tjit" inputmode="decimal" autocomplete="off" placeholder="0,106629"><em>detik</em></div></label>
+          <label class="field"><span>Jumlah Paket</span><div class="inp"><input id="in-njit" inputmode="numeric" autocomplete="off" placeholder="19986"><em>paket</em></div></label>
+        </div>
+        <div class="result" data-out="jit">
+          <div class="res-row"><span class="price empty" data-f="main">—</span><div class="stars" data-f="stars"></div></div>
+          <p class="sub" data-f="sub"></p>
+          <p class="meta" data-f="meta"></p>
+          <p class="warn" data-f="warn" hidden></p>
+          <p class="formula">Jitter = (Total Jitter ÷ Jumlah Paket) × 1000</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="card results" id="hasil">
+      <div class="sec-title" style="margin-top:0"><h2>Hasil</h2><span id="hasilInfo">0/4 parameter terisi</span></div>
+      <table class="rtable" aria-label="Ringkasan hasil">
+        <tr><td>Throughput</td><td id="r-thr"><span class="mono">—</span></td></tr>
+        <tr><td>Packet Loss</td><td id="r-loss"><span class="mono">—</span></td></tr>
+        <tr><td>Delay</td><td id="r-delay"><span class="mono">—</span></td></tr>
+        <tr><td>Jitter</td><td id="r-jit"><span class="mono">—</span></td></tr>
+        <tr class="avgrow"><td>Indeks rata-rata</td><td id="r-avg">—</td></tr>
+      </table>
+      <p class="note" id="avgNote"></p>
+      <div class="actions">
+        <button class="btn primary" id="btnCopy"><svg><use href="#i-copy"/></svg>Salin hasil</button>
+        <button class="btn" id="btnSave"><svg><use href="#i-save"/></svg>Simpan ke riwayat</button>
+        <button class="btn" id="btnPrint"><svg><use href="#i-print"/></svg>Cetak / PDF</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CSV ========== -->
+  <section class="tab" id="tab-csv" hidden>
+    <div class="sec-title"><h2>Impor Raw Data</h2><span>CSV mentah dari Wireshark — semua variabel dihitung otomatis</span></div>
+    <div class="card">
+      <div class="drop" id="drop">
+        <svg><use href="#i-up"/></svg>
+        <h3>Tarik file CSV raw data ke sini</h3>
+        <p>Kolom: <code class="i">No.</code> <code class="i">Time</code> <code class="i">Source</code> <code class="i">Destination</code> <code class="i">Protocol</code> <code class="i">Length</code> <code class="i">Info</code></p>
+        <button class="btn primary" id="btnPick"><svg><use href="#i-up"/></svg>Pilih file CSV</button>
+        <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+        <div class="actions" style="justify-content:center"><button class="btn" id="btnTpl"><svg><use href="#i-dl"/></svg>Unduh contoh raw data</button></div>
+      </div>
+      <p class="note" id="csvMsg">Ekspor dari Wireshark: <b>File → Export Packet Dissections → As CSV</b>, dengan <b>View → Time Display Format → Seconds Since Beginning of Capture</b>. File diproses di browser Anda dan tidak diunggah ke mana pun.</p>
+
+      <div id="csvResult" hidden>
+        <div class="stats" id="csvStats"></div>
+
+        <p class="ctl">Filter (opsional)</p>
+        <div class="filters">
+          <label class="field"><span>Protokol</span><div class="inp"><select id="fProto"></select></div></label>
+          <label class="field"><span>Alamat IP (sebagai Source atau Destination)</span><div class="inp"><input id="fIp" autocomplete="off" placeholder="mis. 10.57.95.192"></div></label>
+        </div>
+
+        <p class="ctl">Penentu paket hilang (Packet Loss)</p>
+        <div class="radio">
+          <label><input type="radio" name="lossk" value="lost" checked><span><b>Previous segment not captured</b><span data-cnt="lost"></span> = filter Wireshark <code class="i">tcp.analysis.lost_segment</code></span></label>
+          <label><input type="radio" name="lossk" value="retx"><span><b>TCP Retransmission</b><span data-cnt="retx"></span></span></label>
+          <label><input type="radio" name="lossk" value="dup"><span><b>TCP Dup ACK</b><span data-cnt="dup"></span></span></label>
+          <label><input type="radio" name="lossk" value="ooo"><span><b>Out-Of-Order</b><span data-cnt="ooo"></span></span></label>
+          <label><input type="radio" name="lossk" value="custom"><span><b>Kata kunci sendiri (kolom Info)</b><span data-cnt="custom"></span><input id="fKw" class="plain" autocomplete="off" placeholder="mis. lost"></span></label>
+        </div>
+        <p class="note">Paket diterima = jumlah paket − paket hilang. Paket dikirim = jumlah paket pada raw data.</p>
+
+        <p class="ctl">Timespan</p>
+        <div class="radio">
+          <label><input type="radio" name="spanm" value="3" checked><span><b>Bulatkan 3 desimal</b>Sama seperti Time span di Wireshark dan perhitungan manual Anda (<span data-span="3"></span>).</span></label>
+          <label><input type="radio" name="spanm" value="full"><span><b>Presisi penuh</b>Waktu paket terakhir − pertama apa adanya (<span data-span="full"></span>).</span></label>
+        </div>
+
+        <p class="ctl">Mode jitter</p>
+        <div class="radio" role="radiogroup" aria-label="Mode jitter">
+          <label><input type="radio" name="jmode" value="signed" checked><span><b>Persis Excel (bertanda)</b>Σ(delay 2 − delay 1) dengan tanda +/−.</span></label>
+          <label><input type="radio" name="jmode" value="abs"><span><b>Nilai absolut</b>Σ|delay 2 − delay 1|; selisih positif/negatif tidak saling menghapus.</span></label>
+        </div>
+
+        <div class="canvaswrap"><h4>Delay per paket (detik)</h4><canvas id="cvDelay"></canvas></div>
+        <div class="canvaswrap"><h4>Jitter per paket (detik)</h4><canvas id="cvJit"></canvas></div>
+        <div class="actions">
+          <button class="btn primary" id="btnApply"><svg><use href="#i-calc"/></svg>Terapkan ke Kalkulator</button>
+          <button class="btn" id="btnRows"><svg><use href="#i-dl"/></svg>Unduh tabel per paket (format Excel)</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== RUMUS ========== -->
+  <section class="tab" id="tab-rumus" hidden>
+    <div class="sec-title"><h2>Fungsi &amp; Rumus Asli</h2><span>Contoh angka memakai data Anda</span></div>
+    <div class="docs">
+      <article class="card doc">
+        <h3>Throughput</h3>
+        <p class="fn">Mengukur kecepatan transfer data efektif: total byte yang berhasil diterima dibagi lamanya pengamatan (timespan), lalu dikonversi ke bit.</p>
+        <span class="code">Throughput (bit/s) = (Jumlah Bytes ÷ Timespan) × 8</span>
+        <h4>Contoh</h4>
+        <span class="code">8.346.343 ÷ 46,543 = 179.325,4195 byte/s
+179.325,4195 × 8  = 1.434.603,356 bit/s</span>
+        <h4>Catatan</h4>
+        <ul><li>Satuan hasil: bit/s (÷1000 = kbps, ÷1.000.000 = Mbps).</li><li>Indeks TIPHON memakai persentase terhadap bandwidth: Throughput ÷ Bandwidth × 100.</li></ul>
+      </article>
+      <article class="card doc">
+        <h3>Packet Loss</h3>
+        <p class="fn">Mengukur proporsi paket yang gagal sampai tujuan. Semakin kecil semakin baik.</p>
+        <span class="code">Packet Loss (%) = ((Paket dikirim − Paket diterima) ÷ Paket dikirim) × 100</span>
+        <h4>Contoh</h4>
+        <span class="code">((10553 − 10546) ÷ 10553) × 100 = 0,0663 %</span>
+        <h4>Catatan</h4>
+        <ul><li>Paket hilang = dikirim − diterima (di contoh: 7 paket, yaitu baris “Previous segment not captured” di Wireshark).</li><li>Hasil 99,93% bila dihitung dari diterima ÷ dikirim adalah <i>tingkat penerimaan</i>, bukan packet loss.</li></ul>
+      </article>
+      <article class="card doc">
+        <h3>Delay</h3>
+        <p class="fn">Rata-rata waktu tunda antar paket. Di Excel, delay tiap paket adalah selisih waktu paket berikutnya dengan waktu paket saat ini.</p>
+        <span class="code">Delay paket     = time 2 − time 1
+Delay (ms)      = (Total Delay ÷ Jumlah Paket) × 1000</span>
+        <h4>Contoh</h4>
+        <span class="code">46,543364 ÷ 10.553 = 0,004410439 detik
+0,004410439 × 1000 = 4,410439 ms</span>
+        <h4>Catatan</h4>
+        <ul><li>Total Delay = Σ delay seluruh paket (detik); delay paket = Time paket berikutnya − Time paket ini.</li><li>Jumlah Paket = banyak baris pada kolom No.</li></ul>
+      </article>
+      <article class="card doc">
+        <h3>Jitter</h3>
+        <p class="fn">Variasi delay antar paket berturut-turut. Di Excel: delay paket berikutnya dikurangi delay paket saat ini.</p>
+        <span class="code">Jitter paket     = delay 2 − delay 1
+Jitter (ms)      = (Total Jitter ÷ Jumlah Paket) × 1000</span>
+        <h4>Contoh</h4>
+        <span class="code">0,0209389 ÷ 10.553 = 1,98417E-06 detik
+1,98417E-06 × 1000 = 0,00198417 ms</span>
+        <h4>Catatan</h4>
+        <ul><li>Mode “bertanda” = persis Excel; mode “absolut” tersedia saat impor CSV.</li></ul>
+      </article>
+      <article class="card doc" style="grid-column:1/-1">
+        <h3>Indeks Rata-rata (Standar TIPHON)</h3>
+        <p class="fn">Setiap parameter dikonversi ke indeks 1–4 berdasarkan Tabel Indeks, lalu dirata-rata.</p>
+        <span class="code">Indeks rata-rata = (Indeks Throughput + Indeks Packet Loss + Indeks Delay + Indeks Jitter) ÷ 4</span>
+        <ul><li>3,8 – 4 : Sangat Memuaskan · 3 – 3,79 : Memuaskan · 2 – 2,99 : Kurang Memuaskan · 1 – 1,99 : Jelek</li></ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ========== MANUAL ========== -->
+  <section class="tab" id="tab-manual" hidden>
+    <div class="sec-title"><h2>Cara Konvensional</h2><span>Wireshark + kalkulator/Excel, langkah ringkas</span></div>
+
+    <details class="acc" open><summary><span class="tile" style="width:38px;height:38px;border-radius:12px"><svg style="width:20px;height:20px"><use href="#i-bolt"/></svg></span>Throughput</summary><div class="body"><ol>
+      <li>Buka file hasil capture di Wireshark.</li>
+      <li>Menu <kbd>Statistics → Capture File Properties</kbd>.</li>
+      <li>Catat <b>Bytes</b> dan <b>Time span, s</b> pada bagian Measurement (atau di Excel: <code class="i">=SUM(kolom Length)</code> pada raw data).</li>
+      <li>Bagi: <code class="i">Bytes ÷ Time span</code> → byte/s.</li>
+      <li>Kalikan 8 → <b>bit/s</b>. Bagi 1000 untuk kbps.</li>
+      <li>Untuk indeks: <code class="i">bit/s ÷ (Bandwidth × 1.000.000) × 100</code> lalu cocokkan ke tabel.</li>
+    </ol></div></details>
+
+    <details class="acc"><summary><span class="tile" style="width:38px;height:38px;border-radius:12px;background:#fff0f2;color:var(--i1)"><svg style="width:20px;height:20px"><use href="#i-pkg"/></svg></span>Packet Loss</summary><div class="body"><ol>
+      <li>Buka capture di Wireshark tanpa filter; catat jumlah <b>Displayed</b> di status bar = <b>paket dikirim</b>.</li>
+      <li>Ketik display filter <code class="i">tcp.analysis.lost_segment</code> lalu Enter; catat <b>Displayed</b> = <b>paket hilang</b>.</li>
+      <li><b>Paket diterima</b> = dikirim − hilang.</li>
+      <li>Hitung <code class="i">((dikirim − diterima) ÷ dikirim) × 100</code> → <b>%</b>.</li>
+      <li>Cocokkan dengan Tabel Indeks.</li>
+    </ol></div></details>
+
+    <details class="acc"><summary><span class="tile" style="width:38px;height:38px;border-radius:12px;background:#fff6e0;color:#c98400"><svg style="width:20px;height:20px"><use href="#i-clock"/></svg></span>Delay</summary><div class="body"><ol>
+      <li>Di Wireshark: <kbd>File → Export Packet Dissections → As CSV</kbd> (raw data). Atur dulu <kbd>View → Time Display Format → Seconds Since Beginning of Capture</kbd>. File ini juga yang diunggah di halaman Impor Raw Data.</li>
+      <li>Di Excel: kolom <b>time 1</b> = Time baris ke-n, <b>time 2</b> = Time baris ke-(n+1).</li>
+      <li>Kolom <b>delay</b> = <code class="i">time 2 − time 1</code>, isi ke seluruh baris.</li>
+      <li><b>Total delay</b> = <code class="i">SUM(kolom delay)</code>.</li>
+      <li><b>Jumlah paket</b> = <code class="i">COUNT(kolom No.)</code>.</li>
+      <li>Rata delay = Total ÷ Jumlah paket (detik); kalikan 1000 → <b>ms</b>.</li>
+    </ol></div></details>
+
+    <details class="acc"><summary><span class="tile" style="width:38px;height:38px;border-radius:12px;background:#e8faf2;color:var(--i4)"><svg style="width:20px;height:20px"><use href="#i-wave"/></svg></span>Jitter</summary><div class="body"><ol>
+      <li>Gunakan kolom <b>delay</b> dari langkah Delay.</li>
+      <li><b>delay 1</b> = delay baris ke-n, <b>delay 2</b> = delay baris ke-(n+1).</li>
+      <li>Kolom <b>jitter</b> = <code class="i">delay 2 − delay 1</code>.</li>
+      <li><b>Total jitter</b> = <code class="i">SUM(kolom jitter)</code>.</li>
+      <li>Rata jitter = Total ÷ Jumlah paket (detik); kalikan 1000 → <b>ms</b>.</li>
+    </ol></div></details>
+
+    <details class="acc"><summary><span class="tile" style="width:38px;height:38px;border-radius:12px"><svg style="width:20px;height:20px"><use href="#i-table"/></svg></span>Indeks rata-rata</summary><div class="body"><ol>
+      <li>Ubah tiap hasil menjadi indeks 1–4 memakai Tabel Indeks.</li>
+      <li>Jumlahkan keempat indeks, bagi 4.</li>
+      <li>Tentukan kategori: 3,8–4 Sangat Memuaskan, 3–3,79 Memuaskan, 2–2,99 Kurang Memuaskan, 1–1,99 Jelek.</li>
+    </ol></div></details>
+  </section>
+
+  <!-- ========== INDEKS ========== -->
+  <section class="tab" id="tab-indeks" hidden>
+    <div class="sec-title"><h2>Tabel Indeks TIPHON</h2><span>Baris yang sesuai dengan hasil Anda otomatis disorot</span></div>
+    <div class="tgrid" id="tiphon"></div>
+    <p class="note">Batas kategori dapat diubah pada objek <code class="i">TIPHON</code> di bagian atas skrip <code class="i">index.html</code> bila institusi Anda memakai tabel yang sedikit berbeda.</p>
+  </section>
+
+  <!-- ========== RIWAYAT ========== -->
+  <section class="tab" id="tab-riwayat" hidden>
+    <div class="sec-title"><h2>Riwayat Perhitungan</h2><span>Tersimpan di browser ini</span></div>
+    <div class="card">
+      <div class="scroll" id="histWrap"></div>
+      <div class="actions">
+        <button class="btn primary" id="btnExport"><svg><use href="#i-dl"/></svg>Ekspor CSV</button>
+        <button class="btn danger" id="btnClear"><svg><use href="#i-trash"/></svg>Hapus semua</button>
+      </div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<button class="cartbar" id="cartbar" aria-label="Lihat hasil">
+  <span class="l">Lihat hasil <span class="pill" id="cartCount">0/4</span></span>
+  <span class="r" id="cartVal">—</span>
+</button>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const byId = id => document.getElementById(id);
+
+/* ============================================================
+   KONFIGURASI INDEKS TIPHON  (ubah di sini bila perlu)
+   ============================================================ */
+const TIPHON = {
+  thr:  { title: 'Throughput',  unit: '% dari bandwidth', rows: [
+    { i: 4, range: '> 75 – 100 %', test: v => v > 75 },
+    { i: 3, range: '> 50 – 75 %',  test: v => v > 50 },
+    { i: 2, range: '> 25 – 50 %',  test: v => v > 25 },
+    { i: 1, range: '0 – 25 %',     test: () => true } ] },
+  loss: { title: 'Packet Loss', unit: '%', rows: [
+    { i: 4, range: '0 – < 3 %',  test: v => v < 3 },
+    { i: 3, range: '3 – < 15 %', test: v => v < 15 },
+    { i: 2, range: '15 – < 25 %', test: v => v < 25 },
+    { i: 1, range: '≥ 25 %',     test: () => true } ] },
+  delay:{ title: 'Delay',       unit: 'ms', rows: [
+    { i: 4, range: '< 150 ms',        test: v => v < 150 },
+    { i: 3, range: '150 – < 300 ms',  test: v => v < 300 },
+    { i: 2, range: '300 – < 450 ms',  test: v => v < 450 },
+    { i: 1, range: '≥ 450 ms',        test: () => true } ] },
+  jit:  { title: 'Jitter',      unit: 'ms', rows: [
+    { i: 4, range: '0 ms',            test: v => v === 0 },
+    { i: 3, range: '> 0 – < 75 ms',   test: v => v < 75 },
+    { i: 2, range: '75 – < 125 ms',   test: v => v < 125 },
+    { i: 1, range: '≥ 125 ms',        test: () => true } ] }
+};
+const LABEL = { 4: 'Sangat Bagus', 3: 'Bagus', 2: 'Sedang', 1: 'Jelek' };
+const idxOf = (k, v) => Number.isFinite(v) ? TIPHON[k].rows.find(r => r.test(v)).i : null;
+const category = a => a >= 3.8 ? 'Sangat Memuaskan' : a >= 3 ? 'Memuaskan' : a >= 2 ? 'Kurang Memuaskan' : 'Jelek';
+
+/* ============================================================
+   RUMUS QoS
+   ============================================================ */
+const QoS = {
+  throughput: (bytes, span) => { const Bps = bytes / span; return { Bps, bps: Bps * 8 }; },
+  packetLoss: (sent, recv) => ((sent - recv) / sent) * 100,
+  average:    (total, n) => total / n,            // hasil dalam detik
+  toMs:       s => s * 1000
+};
+
+/* ============================================================
+   PARSER & FORMAT ANGKA
+   ============================================================ */
+function parseDec(str) {
+  if (str == null) return NaN;
+  let s = String(str).trim().replace(/\s/g, '');
+  if (!s) return NaN;
+  const c = s.includes(','), d = s.includes('.');
+  if (c && d) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (c) s = s.replace(',', '.');
+  return /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s) ? parseFloat(s) : NaN;
+}
+function parseCount(str) {
+  if (str == null) return NaN;
+  const s = String(str).trim().replace(/[.,\s_]/g, '');
+  return /^\d+$/.test(s) ? parseInt(s, 10) : NaN;
+}
+const nf  = (n, max = 6, min = 0) => Number.isFinite(n) ? n.toLocaleString('id-ID', { minimumFractionDigits: min, maximumFractionDigits: max }) : '—';
+const sig = (n, d = 8) => Number.isFinite(n) ? n.toLocaleString('id-ID', { maximumSignificantDigits: d }) : '—';
+function sci(n, d = 5) {
+  if (!Number.isFinite(n)) return '—';
+  if (n !== 0 && Math.abs(n) < 1e-4) {
+    return n.toExponential(d).replace('.', ',').replace(/e([+-])(\d)$/i, 'E$10$2').replace(/e/i, 'E');
+  }
+  return sig(n, 9);
+}
+const clean = n => +n.toPrecision(12);
+const toField = n => String(clean(n)).replace('.', ',');
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function toast(msg) {
+  const t = byId('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+const stars = i => i ? Array.from({ length: 4 }, (_, k) => `<svg class="star ${k < i ? 'on' : ''}" viewBox="0 0 24 24"><use href="#i-star"/></svg>`).join('') + `<span class="lbl">${LABEL[i]} (${i})</span>` : '';
+const val = id => byId(id).value;
+
+/* ============================================================
+   KALKULATOR
+   ============================================================ */
+let last = null;
+
+function setCard(k, o) {
+  const box = $(`[data-out="${k}"]`);
+  const main = $('[data-f=main]', box);
+  main.textContent = o.main ?? '—';
+  main.classList.toggle('empty', !o.main);
+  $('[data-f=sub]', box).textContent = o.sub || '';
+  $('[data-f=meta]', box).textContent = o.meta || '';
+  const w = $('[data-f=warn]', box); w.textContent = o.warn || ''; w.hidden = !o.warn;
+  const st = $('[data-f=stars]', box); st.innerHTML = o.idx ? stars(o.idx) : ''; st.dataset.i = o.idx || '';
+  box.dataset.i = o.idx || '';
+}
+
+function recalc() {
+  const v = {
+    bytes: parseCount(val('in-bytes')), span: parseDec(val('in-span')), bw: parseDec(val('in-bw')),
+    sent: parseCount(val('in-sent')), recv: parseCount(val('in-recv')),
+    tdel: parseDec(val('in-tdel')), ndel: parseCount(val('in-ndel')),
+    tjit: parseDec(val('in-tjit')), njit: parseCount(val('in-njit'))
+  };
+  const R = { thr: null, loss: null, delay: null, jit: null };
+
+  // Throughput
+  if (Number.isFinite(v.bytes) && Number.isFinite(v.span) && v.span > 0) {
+    const t = QoS.throughput(v.bytes, v.span);
+    const o = { bps: t.bps, Bps: t.Bps };
+    o.main = nf(t.bps, 3) + ' bit/s';
+    o.sub = `${nf(v.bytes, 0)} / ${nf(v.span, 6)} = ${nf(t.Bps, 4)} byte/s × 8 = ${nf(t.bps, 3)} bit/s`;
+    o.meta = `≈ ${nf(t.bps / 1e3, 3)} kbps · ${nf(t.bps / 1e6, 4)} Mbps`;
+    if (Number.isFinite(v.bw) && v.bw > 0) {
+      o.pct = t.bps / (v.bw * 1e6) * 100;
+      o.idx = idxOf('thr', o.pct);
+      o.meta += ` · ${nf(o.pct, 2)} % dari bandwidth`;
+    } else o.meta += ' · isi bandwidth untuk mendapat indeks';
+    R.thr = o; setCard('thr', o);
+  } else setCard('thr', { warn: Number.isFinite(v.span) && v.span <= 0 ? 'Timespan harus lebih dari 0.' : '' });
+
+  // Packet loss
+  if (Number.isFinite(v.sent) && Number.isFinite(v.recv) && v.sent > 0) {
+    const l = QoS.packetLoss(v.sent, v.recv);
+    const o = { loss: l, lost: v.sent - v.recv };
+    o.main = nf(l, 4) + ' %';
+    o.sub = `((${nf(v.sent, 0)} − ${nf(v.recv, 0)}) / ${nf(v.sent, 0)}) × 100 = ${nf(l, 6)} %`;
+    o.meta = `${nf(v.sent - v.recv, 0)} paket hilang dari ${nf(v.sent, 0)} paket dikirim`;
+    if (v.recv > v.sent) o.warn = 'Paket diterima lebih besar dari dikirim — periksa input.';
+    else o.idx = idxOf('loss', l);
+    R.loss = o; setCard('loss', o);
+  } else setCard('loss', { warn: v.sent === 0 ? 'Paket dikirim harus lebih dari 0.' : '' });
+
+  // Delay
+  if (Number.isFinite(v.tdel) && Number.isFinite(v.ndel) && v.ndel > 0) {
+    const s = QoS.average(v.tdel, v.ndel), ms = QoS.toMs(s);
+    const o = { s, ms, idx: idxOf('delay', ms) };
+    o.main = sig(ms, 8) + ' ms';
+    o.sub = `${sig(v.tdel, 12)} / ${nf(v.ndel, 0)} = ${sig(s, 10)} s × 1000 = ${sig(ms, 10)} ms`;
+    o.meta = `Rata-rata delay = ${sig(s, 10)} detik`;
+    R.delay = o; setCard('delay', o);
+  } else setCard('delay', { warn: v.ndel === 0 ? 'Jumlah paket harus lebih dari 0.' : '' });
+
+  // Jitter
+  if (Number.isFinite(v.tjit) && Number.isFinite(v.njit) && v.njit > 0) {
+    const s = QoS.average(v.tjit, v.njit), ms = QoS.toMs(s);
+    const o = { s, ms, idx: idxOf('jit', Math.abs(ms)) };
+    o.main = sig(ms, 6) + ' ms';
+    o.sub = `${sig(v.tjit, 12)} / ${nf(v.njit, 0)} = ${sci(s)} s × 1000 = ${sig(ms, 8)} ms`;
+    o.meta = `Rata-rata jitter = ${sci(s)} detik`;
+    R.jit = o; setCard('jit', o);
+  } else setCard('jit', { warn: v.njit === 0 ? 'Jumlah paket harus lebih dari 0.' : '' });
+
+  renderResults(R, v);
+}
+
+function renderResults(R, v) {
+  const cell = (id, text, idx) => {
+    byId(id).innerHTML = text ? `<span class="mono">${text}</span> ${idx ? `<span class="badge" data-i="${idx}" title="${LABEL[idx]}">${idx}</span>` : ''}` : '<span class="mono">—</span>';
+  };
+  cell('r-thr',  R.thr  && R.thr.main,  R.thr  && R.thr.idx);
+  cell('r-loss', R.loss && R.loss.main, R.loss && R.loss.idx);
+  cell('r-delay',R.delay&& R.delay.main,R.delay&& R.delay.idx);
+  cell('r-jit',  R.jit  && R.jit.main,  R.jit  && R.jit.idx);
+
+  const idxs = ['thr', 'loss', 'delay', 'jit'].map(k => R[k] && R[k].idx).filter(Boolean);
+  const filled = ['thr', 'loss', 'delay', 'jit'].filter(k => R[k]).length;
+  const avg = idxs.length ? idxs.reduce((a, b) => a + b, 0) / idxs.length : null;
+
+  byId('hasilInfo').textContent = `${filled}/4 parameter terisi`;
+  byId('cartCount').textContent = `${filled}/4`;
+  byId('cartVal').textContent = avg ? `Indeks ${nf(avg, 2)}` : '—';
+  byId('r-avg').innerHTML = avg ? `<span class="mono">${nf(avg, 2)}</span> · ${category(avg)}` : '—';
+  byId('avgNote').textContent = idxs.length && idxs.length < 4
+    ? `Rata-rata dihitung dari ${idxs.length} indeks yang tersedia${!R.thr || !R.thr.idx ? ' (isi Bandwidth agar indeks Throughput ikut dihitung)' : ''}.` : '';
+  byId('heroIdx').textContent = avg ? nf(avg, 2) : '—';
+  byId('heroCat').textContent = avg ? category(avg) : 'Isi data untuk mulai';
+  $$('#heroBars i').forEach((b, k) => b.classList.toggle('on', avg && k < Math.round(avg)));
+  byId('histDot').hidden = true;
+
+  last = { R, v, avg, idxs };
+  highlightTiphon(R);
+}
+
+function resultText() {
+  if (!last) return '';
+  const { R, avg } = last;
+  const L = [];
+  L.push('Hasil :');
+  L.push(`Throughput : ${R.thr ? R.thr.main + (R.thr.idx ? ` (Indeks ${R.thr.idx})` : '') : '-'}`);
+  L.push(`Packet Loss : ${R.loss ? R.loss.main + (R.loss.idx ? ` (Indeks ${R.loss.idx})` : '') : '-'}`);
+  L.push(`Delay : ${R.delay ? R.delay.main + ` (Indeks ${R.delay.idx})` : '-'}`);
+  L.push(`Jitter : ${R.jit ? R.jit.main + ` (Indeks ${R.jit.idx})` : '-'}`);
+  L.push(`Indeks rata-rata : ${avg ? nf(avg, 2) + ' (' + category(avg) + ')' : '-'}`);
+  return L.join('\n');
+}
+
+/* ============================================================
+   TABEL TIPHON
+   ============================================================ */
+function buildTiphon() {
+  byId('tiphon').innerHTML = Object.entries(TIPHON).map(([k, t]) => `
+    <div class="card" data-tk="${k}">
+      <h3 style="margin:0 0 8px;font-size:16px">${t.title} <small style="color:var(--muted);font-weight:600">(${t.unit})</small></h3>
+      <table class="t"><thead><tr><th>Indeks</th><th>Kategori</th><th>Rentang</th></tr></thead><tbody>
+        ${t.rows.map(r => `<tr data-i="${r.i}"><td><span class="badge" data-i="${r.i}">${r.i}</span></td><td>${LABEL[r.i]}</td><td>${r.range}</td></tr>`).join('')}
+      </tbody></table>
+    </div>`).join('') + `
+    <div class="card" style="grid-column:1/-1">
+      <h3 style="margin:0 0 8px;font-size:16px">Kategori Indeks Rata-rata</h3>
+      <table class="t"><thead><tr><th>Rentang</th><th>Kategori</th></tr></thead><tbody>
+        <tr data-c="a"><td>3,8 – 4</td><td>Sangat Memuaskan</td></tr>
+        <tr data-c="b"><td>3 – 3,79</td><td>Memuaskan</td></tr>
+        <tr data-c="c"><td>2 – 2,99</td><td>Kurang Memuaskan</td></tr>
+        <tr data-c="d"><td>1 – 1,99</td><td>Jelek</td></tr>
+      </tbody></table>
+    </div>`;
+}
+function highlightTiphon(R) {
+  $$('#tiphon [data-tk]').forEach(card => {
+    const k = card.dataset.tk, idx = R[k] && R[k].idx;
+    $$('tbody tr', card).forEach(tr => tr.classList.toggle('hit', !!idx && +tr.dataset.i === idx));
+  });
+  const a = last && last.avg;
+  const key = !a ? null : a >= 3.8 ? 'a' : a >= 3 ? 'b' : a >= 2 ? 'c' : 'd';
+  $$('#tiphon tr[data-c]').forEach(tr => tr.classList.toggle('hit', tr.dataset.c === key));
+}
+
+/* ============================================================
+   IMPOR RAW DATA  (Wireshark → Export Packet Dissections → As CSV)
+   ============================================================ */
+let raw = null, csvData = null;
+const norm = s => String(s || '').toLowerCase().replace(/[\s'"`’‘.]/g, '');
+const LOSS = { lost: 'previous segment not captured', retx: 'retransmission', dup: 'dup ack', ooo: 'out-of-order' };
+
+function splitLine(line, delim) {            // pemisah kolom yang mengenali tanda kutip
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur); return out;
+}
+
+function parseRaw(text) {
+  text = String(text).replace(/^﻿/, '');
+  const lines = text.split(/\r?\n/);
+  const hi = lines.findIndex(l => l.trim());
+  if (hi < 0) throw new Error('File kosong.');
+  const first = lines[hi];
+  const delim = [',', ';', '\t'].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const head = splitLine(first, delim).map(norm);
+  const c = { no: head.indexOf('no'), t: head.indexOf('time'), src: head.indexOf('source'), dst: head.indexOf('destination'),
+              pr: head.indexOf('protocol'), len: head.indexOf('length'), info: head.indexOf('info') };
+  if (c.t < 0 || c.len < 0) throw new Error('Kolom "Time" dan "Length" tidak ditemukan. Gunakan Wireshark → File → Export Packet Dissections → As CSV.');
+  const R = { no: [], T: [], LEN: [], PR: [], SRC: [], DST: [], INFOL: [], delim };
+  for (let r = hi + 1; r < lines.length; r++) {
+    if (!lines[r].trim()) continue;
+    const f = splitLine(lines[r], delim);
+    const t = parseDec(f[c.t]), len = parseDec(f[c.len]);
+    if (!Number.isFinite(t) || !Number.isFinite(len)) continue;
+    R.no.push(c.no >= 0 ? String(f[c.no]).trim() : String(R.T.length + 1));
+    R.T.push(t); R.LEN.push(len);
+    R.PR.push(c.pr >= 0 ? (f[c.pr] || '').trim() : '');
+    R.SRC.push(c.src >= 0 ? (f[c.src] || '').trim() : '');
+    R.DST.push(c.dst >= 0 ? (f[c.dst] || '').trim() : '');
+    R.INFOL.push(c.info >= 0 ? (f[c.info] || '').toLowerCase() : '');
+  }
+  R.n = R.T.length;
+  if (!R.n) throw new Error('Tidak ada baris paket yang valid. Pastikan kolom Time berupa detik (View → Time Display Format → Seconds Since Beginning of Capture).');
+  return R;
+}
+
+function compute() {
+  const R = raw, proto = byId('fProto').value, ip = byId('fIp').value.trim();
+  const idx = [];
+  for (let i = 0; i < R.n; i++) {
+    if (proto && R.PR[i] !== proto) continue;
+    if (ip && R.SRC[i] !== ip && R.DST[i] !== ip) continue;
+    idx.push(i);
+  }
+  const n = idx.length;
+  if (!n) return null;
+  let bytes = 0, mn = Infinity, mx = -Infinity;
+  const counts = { lost: 0, retx: 0, dup: 0, ooo: 0, custom: 0 };
+  const kwCustom = byId('fKw').value.trim().toLowerCase();
+  for (const i of idx) {
+    bytes += R.LEN[i];
+    const t = R.T[i]; if (t < mn) mn = t; if (t > mx) mx = t;
+    const s = R.INFOL[i];
+    for (const k in LOSS) if (s.includes(LOSS[k])) counts[k]++;
+    if (kwCustom && s.includes(kwCustom)) counts.custom++;
+  }
+  const span = mx - mn;
+  const spanUsed = ($('input[name=spanm]:checked') || {}).value === 'full' ? span : Math.round(span * 1000) / 1000;
+  const delays = [], jitters = [];
+  let tDel = 0, tJit = 0, tJitAbs = 0;
+  for (let m = 0; m < n - 1; m++) { const d = R.T[idx[m + 1]] - R.T[idx[m]]; delays.push(d); tDel += d; }
+  for (let m = 0; m < delays.length - 1; m++) { const j = delays[m + 1] - delays[m]; jitters.push(j); tJit += j; tJitAbs += Math.abs(j); }
+  const lk = ($('input[name=lossk]:checked') || {}).value || 'lost';
+  const lost = Math.min(counts[lk] || 0, n);
+  return { idx, n, bytes, span, spanUsed, delays, jitters, tDel, tJit, tJitAbs, counts, lost, lk };
+}
+
+function refreshCsv() {
+  if (!raw) return;
+  csvData = compute();
+  const stats = byId('csvStats');
+  if (!csvData) { stats.innerHTML = '<div class="stat" style="grid-column:1/-1"><small>Tidak ada paket yang cocok dengan filter.</small></div>'; return; }
+  const d = csvData, jm = ($('input[name=jmode]:checked') || {}).value || 'signed';
+  const avgD = d.tDel / d.n, tj = jm === 'abs' ? d.tJitAbs : d.tJit, avgJ = tj / d.n;
+  $$('[data-cnt]').forEach(s => { const k = s.dataset.cnt; s.textContent = k === 'custom' && !byId('fKw').value.trim() ? '' : `${nf(d.counts[k], 0)} paket terdeteksi`; });
+  $$('[data-span]').forEach(s => s.textContent = nf(s.dataset.span === '3' ? Math.round(d.span * 1000) / 1000 : d.span, 6) + ' s');
+  stats.innerHTML = [
+    ['Jumlah paket', nf(d.n, 0), `dari ${nf(raw.n, 0)} baris raw data`],
+    ['Total bytes', nf(d.bytes, 0) + ' B', 'Σ kolom Length'],
+    ['Timespan', nf(d.spanUsed, 6) + ' s', 'waktu terakhir − pertama'],
+    ['Paket hilang', nf(d.lost, 0), `${nf(d.lost / d.n * 100, 4)} % · diterima ${nf(d.n - d.lost, 0)}`],
+    ['Total delay', sig(clean(d.tDel), 12) + ' s', 'Σ (time 2 − time 1)'],
+    ['Rata delay', sig(avgD, 10) + ' s', sig(avgD * 1000, 8) + ' ms'],
+    ['Total jitter', sig(clean(tj), 9) + ' s', jm === 'abs' ? 'Σ |delay 2 − delay 1|' : 'Σ (delay 2 − delay 1)'],
+    ['Rata jitter', sci(avgJ) + ' s', sig(avgJ * 1000, 6) + ' ms']
+  ].map(([a, b, c]) => `<div class="stat"><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+  drawLine(byId('cvDelay'), d.delays, '#2e5bf0');
+  drawLine(byId('cvJit'), d.jitters, '#14a46f');
+}
+
+function loadCSVText(text, name) {
+  try { raw = parseRaw(text); }
+  catch (e) { raw = null; csvData = null; byId('csvResult').hidden = true; byId('csvMsg').textContent = e.message; toast('Gagal membaca CSV'); return; }
+  const cnt = {}; raw.PR.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
+  byId('fProto').innerHTML = `<option value="">Semua protokol (${nf(raw.n, 0)})</option>` +
+    Object.entries(cnt).sort((a, b) => b[1] - a[1]).filter(([p]) => p).map(([p, c]) => `<option value="${p.replace(/"/g, '&quot;')}">${p} (${nf(c, 0)})</option>`).join('');
+  byId('fIp').value = ''; byId('fKw').value = '';
+  const lr = $('input[name=lossk][value=lost]'); if (lr) lr.checked = true;
+  byId('csvMsg').innerHTML = `<b>${name || 'File'}</b> terbaca: ${nf(raw.n, 0)} paket · pemisah “${raw.delim === '\t' ? 'tab' : raw.delim}”.`;
+  byId('csvResult').hidden = false;
+  refreshCsv();
+}
+
+function drawLine(cv, arr, color) {
+  if (!cv || !arr.length) return;
+  const ctx = cv.getContext && cv.getContext('2d');
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 600, h = cv.clientHeight || 150;
+  cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const B = Math.min(arr.length, Math.max(40, Math.floor(w / 2)));
+  const pts = [];
+  for (let b = 0; b < B; b++) {
+    const a = Math.floor(b * arr.length / B), z = Math.max(a + 1, Math.floor((b + 1) * arr.length / B));
+    let s = 0; for (let i = a; i < z; i++) s += arr[i];
+    pts.push(s / (z - a));
+  }
+  let mn = Math.min(...pts), mx = Math.max(...pts); if (mn === mx) { mn -= 1; mx += 1; }
+  const padL = 8, padR = 8, padT = 10, padB = 18;
+  const X = i => padL + i * (w - padL - padR) / Math.max(1, pts.length - 1);
+  const Y = v => padT + (1 - (v - mn) / (mx - mn)) * (h - padT - padB);
+  ctx.clearRect(0, 0, w, h);
+  if (mn < 0 && mx > 0) { ctx.strokeStyle = '#d5deef'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(padL, Y(0)); ctx.lineTo(w - padR, Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, color + '55'); g.addColorStop(1, color + '05');
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(X(i), Y(p)) : ctx.moveTo(X(i), Y(p)));
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.lineTo(X(pts.length - 1), h - padB); ctx.lineTo(X(0), h - padB); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+  ctx.fillStyle = '#6a7898'; ctx.font = '11px system-ui,sans-serif';
+  ctx.fillText(`min ${mn.toPrecision(3)}  ·  maks ${mx.toPrecision(3)}  ·  rata-rata per ${Math.ceil(arr.length / B)} paket`, padL, h - 4);
+}
+
+function applyCsv() {
+  if (!csvData) return;
+  const d = csvData, jm = ($('input[name=jmode]:checked') || {}).value || 'signed';
+  byId('in-bytes').value = String(d.bytes);
+  byId('in-span').value = toField(d.spanUsed);
+  byId('in-sent').value = String(d.n);
+  byId('in-recv').value = String(d.n - d.lost);
+  byId('in-tdel').value = toField(d.tDel);
+  byId('in-ndel').value = String(d.n);
+  byId('in-tjit').value = toField(jm === 'abs' ? d.tJitAbs : d.tJit);
+  byId('in-njit').value = String(d.n);
+  njitSynced = true;
+  recalc(); showTab('hitung'); toast('Raw data diterapkan ke kalkulator');
+  byId('hasil').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function downloadRows() {            // tabel per paket dengan tata letak yang sama seperti Excel Anda
+  if (!csvData) return;
+  const { idx, delays: d, jitters: j } = csvData, T = raw.T;
+  const f = x => x == null ? '' : String(clean(x)).replace('.', ',');
+  const out = ["No.;Time;;time 1;time 2;delay;;delay 1;delay 2;jitter"];
+  idx.forEach((ri, m) => {
+    const t2 = m < idx.length - 1 ? T[idx[m + 1]] : null;
+    out.push([raw.no[ri], f(T[ri]), '', f(T[ri]), f(t2), f(d[m]), '', f(d[m]), f(d[m + 1]), f(j[m])].join(';'));
+  });
+  const n = csvData.n;
+  out.push('');
+  out.push(['', '', '', '', 'Total delay', f(csvData.tDel), '', '', 'Total jitter', f(csvData.tJit)].join(';'));
+  out.push(['', '', '', '', 'Rata delay', f(csvData.tDel / n), '', '', 'Rata jitter', f(csvData.tJit / n)].join(';'));
+  out.push(['', '', '', '', '', '', '', '', 'Total jitter absolut', f(csvData.tJitAbs)].join(';'));
+  download('tabel-per-paket.csv', '﻿' + out.join('\r\n'));
+}
+
+function templateCSV() {
+  const rows = [
+    [1, '0', '10.0.0.2', '93.184.216.34', 'TCP', 54, '51993  >  443 [ACK] Seq=1 Ack=1 Win=2047 Len=0'],
+    [2, '0.041517', '93.184.216.34', '10.0.0.2', 'TLSv1.3', 1454, 'Application Data'],
+    [3, '0.0416376', '93.184.216.34', '10.0.0.2', 'TLSv1.3', 1454, 'Application Data'],
+    [4, '0.042168', '10.0.0.2', '93.184.216.34', 'TCP', 54, '51993  >  443 [ACK] Seq=1 Ack=2909 Win=2047 Len=0'],
+    [5, '0.0556754', '93.184.216.34', '10.0.0.2', 'TLSv1.3', 1454, '[TCP Previous segment not captured] Application Data'],
+    [6, '0.0557319', '10.0.0.2', '93.184.216.34', 'TCP', 54, '[TCP Dup ACK 4#1] 51993  >  443 [ACK] Seq=1 Ack=2909 Win=2047 Len=0'],
+    [7, '0.0713', '93.184.216.34', '10.0.0.2', 'TCP', 1454, '[TCP Retransmission] 443  >  51993 [ACK] Seq=2909 Len=1400'],
+    [8, '0.1089406', '10.0.0.2', '8.8.8.8', 'DNS', 74, 'Standard query 0x1a2b A example.com'],
+    [9, '0.2128373', '8.8.8.8', '10.0.0.2', 'DNS', 90, 'Standard query response 0x1a2b A example.com A 93.184.216.34']
+  ];
+  const q = s => /[",\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : s;
+  return ['No.,Time,Source,Destination,Protocol,Length,Info'].concat(rows.map(r => r.map(q).join(','))).join('\r\n');
+}
+
+function download(name, content, type = 'text/csv;charset=utf-8') {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+}
+
+/* ============================================================
+   RIWAYAT
+   ============================================================ */
+const KEY = 'qos-history-v1';
+let memHist = [];
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return memHist; } },
+  set(a) { memHist = a; try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) { /* abaikan */ } }
+};
+function saveHistory() {
+  if (!last || !last.idxs.length) { toast('Isi minimal satu parameter dulu'); return; }
+  const { R, avg } = last;
+  const h = store.get();
+  h.unshift({
+    t: new Date().toLocaleString('id-ID'),
+    thr: R.thr ? R.thr.bps : null, loss: R.loss ? R.loss.loss : null,
+    delay: R.delay ? R.delay.ms : null, jit: R.jit ? R.jit.ms : null, avg
+  });
+  store.set(h.slice(0, 200)); renderHistory(); toast('Tersimpan ke riwayat');
+}
+function renderHistory() {
+  const h = store.get(), w = byId('histWrap');
+  if (!h.length) { w.innerHTML = '<div class="empty">Belum ada riwayat. Tekan “Simpan ke riwayat” di halaman Hitung.</div>'; return; }
+  w.innerHTML = `<table class="t"><thead><tr><th>Waktu</th><th>Throughput (bit/s)</th><th>Packet Loss (%)</th><th>Delay (ms)</th><th>Jitter (ms)</th><th>Indeks</th><th></th></tr></thead><tbody>` +
+    h.map((r, i) => `<tr><td>${r.t}</td><td>${r.thr == null ? '—' : nf(r.thr, 3)}</td><td>${r.loss == null ? '—' : nf(r.loss, 4)}</td><td>${r.delay == null ? '—' : sig(r.delay, 8)}</td><td>${r.jit == null ? '—' : sig(r.jit, 8)}</td><td><b>${r.avg ? nf(r.avg, 2) : '—'}</b></td><td><button class="btn danger" data-del="${i}" aria-label="Hapus" style="padding:6px 9px"><svg><use href="#i-trash"/></svg></button></td></tr>`).join('') + '</tbody></table>';
+}
+function exportHistory() {
+  const h = store.get(); if (!h.length) { toast('Riwayat kosong'); return; }
+  const f = x => x == null ? '' : String(x).replace('.', ',');
+  const rows = [['Waktu', 'Throughput (bit/s)', 'Packet Loss (%)', 'Delay (ms)', 'Jitter (ms)', 'Indeks rata-rata'].join(';')]
+    .concat(h.map(r => [r.t.replace(/;/g, ','), f(r.thr), f(r.loss), f(r.delay), f(r.jit), f(r.avg)].join(';')));
+  download('riwayat-qos.csv', '﻿' + rows.join('\r\n'));
+}
+
+/* ============================================================
+   TAB / NAVIGASI
+   ============================================================ */
+function showTab(name) {
+  if (!byId('tab-' + name)) name = 'hitung';
+  $$('.tab').forEach(s => s.hidden = s.id !== 'tab-' + name);
+  $$('.chip').forEach(c => c.classList.toggle('active', c.dataset.tab === name));
+  byId('cartbar').hidden = name !== 'hitung';
+  if (name === 'riwayat') renderHistory();
+  if (name === 'csv' && csvData) requestAnimationFrame(() => { drawLine(byId('cvDelay'), csvData.delays, '#2e5bf0'); drawLine(byId('cvJit'), csvData.jitters, '#14a46f'); });
+  if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================================================
+   EVENT
+   ============================================================ */
+function sample() {
+  const s = { 'in-bytes': '8346343', 'in-span': '46,543', 'in-bw': '2', 'in-sent': '10553', 'in-recv': '10546',
+              'in-tdel': '46,543364', 'in-ndel': '10553', 'in-tjit': '0,0209389', 'in-njit': '10553' };
+  Object.entries(s).forEach(([k, x]) => byId(k).value = x);
+  recalc(); toast('Contoh data dimuat (bandwidth 2 Mbps hanya contoh)');
+}
+function resetAll() {
+  $$('.pcard input').forEach(i => i.value = ''); njitSynced = true; recalc(); toast('Semua input dikosongkan');
+}
+
+let njitSynced = true;
+function init() {
+  buildTiphon();
+  $$('.chip').forEach(c => c.addEventListener('click', () => showTab(c.dataset.tab)));
+  $$('[data-go]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.go)));
+  $$('.pcard input').forEach(i => i.addEventListener('input', () => {
+    if (i.id === 'in-ndel' && njitSynced) byId('in-njit').value = i.value;
+    if (i.id === 'in-njit') njitSynced = false;
+    recalc();
+  }));
+  byId('btnSample').addEventListener('click', sample);
+  byId('btnReset').addEventListener('click', resetAll);
+  byId('cartbar').addEventListener('click', () => byId('hasil').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  byId('btnCopy').addEventListener('click', async () => {
+    const t = resultText();
+    try { await navigator.clipboard.writeText(t); toast('Hasil disalin'); }
+    catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Hasil disalin'); } catch (_) { toast('Gagal menyalin'); } ta.remove(); }
+  });
+  byId('btnSave').addEventListener('click', saveHistory);
+  byId('btnPrint').addEventListener('click', () => window.print());
+
+  // Raw data CSV
+  const file = byId('file'), drop = byId('drop');
+  byId('btnPick').addEventListener('click', () => file.click());
+  const read = f => { if (!f) return; const r = new FileReader(); r.onload = () => loadCSVText(r.result, f.name); r.onerror = () => toast('File tidak bisa dibaca'); r.readAsText(f); };
+  file.addEventListener('change', () => { read(file.files[0]); file.value = ''; });
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => read(e.dataTransfer && e.dataTransfer.files[0]));
+  byId('btnApply').addEventListener('click', applyCsv);
+  byId('btnRows').addEventListener('click', downloadRows);
+  byId('btnTpl').addEventListener('click', () => download('contoh-raw-data.csv', '﻿' + templateCSV()));
+  ['input', 'change'].forEach(ev => byId('csvResult').addEventListener(ev, refreshCsv));
+  window.addEventListener('resize', () => { if (csvData && !byId('tab-csv').hidden) { drawLine(byId('cvDelay'), csvData.delays, '#2e5bf0'); drawLine(byId('cvJit'), csvData.jitters, '#14a46f'); } });
+
+  // Riwayat
+  byId('histWrap').addEventListener('click', e => {
+    const b = e.target.closest('[data-del]'); if (!b) return;
+    const h = store.get(); h.splice(+b.dataset.del, 1); store.set(h); renderHistory();
+  });
+  byId('btnExport').addEventListener('click', exportHistory);
+  byId('btnClear').addEventListener('click', () => { store.set([]); renderHistory(); toast('Riwayat dihapus'); });
+
+  window.addEventListener('hashchange', () => showTab(location.hash.slice(1) || 'hitung'));
+  recalc();
+  showTab(location.hash.slice(1) || 'hitung');
+  window.scrollTo(0, 0);
+}
+
+// ekspos untuk pengujian
+window.__QoS = { QoS, parseDec, parseCount, parseRaw, idxOf, category, loadCSVText, recalc };
+init();
+})();
+</script>
+</body>
+</html>
